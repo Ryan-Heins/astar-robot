@@ -5,49 +5,16 @@
 #include <avr/pgmspace.h>
 #include <Servo.h>
 
-/*track 1*/
+/*track */
 #define GRAPH_WIDTH 3
-#define GRAPH_HEIGHT 6
+#define GRAPH_HEIGHT 3
 #define SIZE_OBSTACLE_X 0
 #define START_DIRECTION 0
 //0 = north, 1 = east, 2 = south, 3 = west
 const PROGMEM uint16_t obstacleX[] = {};
 const PROGMEM uint16_t obstacleY[] = {};
-const PROGMEM uint8_t srcXandY[] = {0, 0};
-const PROGMEM uint8_t destXandY[] = {0, 5};
-/*track 2
-#define GRAPH_WIDTH 4
-#define GRAPH_HEIGHT 8
-#define SIZE_OBSTACLE_X 0
-#define START_DIRECTION 0
-//0 = north, 1 = east, 2 = south, 3 = west
-const PROGMEM uint16_t obstacleX[] = {};
-const PROGMEM uint16_t obstacleY[] = {};
-const PROGMEM uint8_t srcXandY[] = {2, 1};
-const PROGMEM uint8_t destXandY[] = {2, 5};
-*/
-/*track 3
-#define GRAPH_WIDTH 4
-#define GRAPH_HEIGHT 8
-#define SIZE_OBSTACLE_X 0
-#define START_DIRECTION 0
-//0 = north, 1 = east, 2 = south, 3 = west
-const PROGMEM uint16_t obstacleX[] = {};
-const PROGMEM uint16_t obstacleY[] = {};
-const PROGMEM uint8_t srcXandY[] = {0, 0};
-const PROGMEM uint8_t destXandY[] = {2, 5};
-*/
-/*track 4 bonus
-#define GRAPH_WIDTH 4
-#define GRAPH_HEIGHT 8
-#define SIZE_OBSTACLE_X 0
-#define START_DIRECTION 0
-//0 = north, 1 = east, 2 = south, 3 = west
-const PROGMEM uint16_t obstacleX[] = {};
-const PROGMEM uint16_t obstacleY[] = {};
-const PROGMEM uint8_t srcXandY[] = {2, 2};
-const PROGMEM uint8_t destXandY[] = {0, 7};
-*/
+const PROGMEM uint8_t srcXandY[] = {1, 0};
+const PROGMEM uint8_t destXandY[] = {1, 1};
 
 //used by isObstacle, isDest, isSource, getH
 
@@ -573,7 +540,7 @@ bool step12() {
     if (analogRead(1) < 11) {
       if (light_count >= 15) {
         //Serial.println("obstacle true 1");
-        obstacle = true; 
+        //obstacle = true; 
         break;
       } else {
         light_count++;
