@@ -536,16 +536,18 @@ bool step12() {
 
     //Serial.print("Photosensor: ");
     //Serial.println(analogRead(1));
-    
+
+    /*
     if (analogRead(1) < 11) {
       if (light_count >= 15) {
         //Serial.println("obstacle true 1");
-        //obstacle = true; 
+        obstacle = true; 
         break;
       } else {
         light_count++;
       }
-    }    
+    } 
+    */   
   }
   
   if (obstacle == true) {  
