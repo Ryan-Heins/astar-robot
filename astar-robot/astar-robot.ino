@@ -5,14 +5,13 @@
 #include <avr/pgmspace.h>
 #include <Servo.h>
 
-/*track */
+/* course graph initialization (hard coded for now)*/
 #define GRAPH_WIDTH 3
 #define GRAPH_HEIGHT 3
-#define SIZE_OBSTACLE_X 0
-#define START_DIRECTION 0
-//0 = north, 1 = east, 2 = south, 3 = west
-const PROGMEM uint16_t obstacleX[] = {};
-const PROGMEM uint16_t obstacleY[] = {};
+#define SIZE_OBSTACLE_X 0   //number of obstacles in course
+#define START_DIRECTION 0   //0 = north, 1 = east, 2 = south, 3 = west
+const PROGMEM uint16_t obstacleX[] = {};  //X coordinates of obstacles
+const PROGMEM uint16_t obstacleY[] = {};  //Y coordinates of obstacles
 const PROGMEM uint8_t srcXandY[] = {1, 0};
 const PROGMEM uint8_t destXandY[] = {1, 1};
 
@@ -28,8 +27,8 @@ Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 Adafruit_StepperMotor *leftMotor = AFMS.getStepper(513, 1);
 Adafruit_StepperMotor *rightMotor = AFMS.getStepper(513, 2);
 
-//test functions
-void printCoor(unsigned int G[]) {
+//debug function
+void debug_printCoor(unsigned int G[]) {
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     Serial.print("Graph Index: ");
     Serial.print(i);
@@ -41,8 +40,10 @@ void printCoor(unsigned int G[]) {
     Serial.print("\n");
   }  
 }
-void printGraphArray(unsigned int G[]) {
-  //printCoor(G);
+
+//debug function
+void debug_printGraphArray(unsigned int G[]) {
+  //debug_printCoor(G);
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     Serial.print("X: ");
     Serial.print(getXCoor(i));
@@ -457,7 +458,7 @@ void shortestPath(unsigned int path[], unsigned int G[], unsigned int source) {
         }
       }
     }
-    //printGraphArray(G);
+    //debug_printGraphArray(G);
   }
 
   //build path
@@ -477,7 +478,7 @@ void shortestPath(unsigned int path[], unsigned int G[], unsigned int source) {
   Serial.print("'s optimal previous: ");
   Serial.println(prev_optimal_dir);
   */
-  //printGraphArray(G);
+  //debug_printGraphArray(G);
   unsigned int prev_optimal = getIndex(destXandY[0], destXandY[1]), path_count = 0;
   
   while (prev_optimal >= 0) {
@@ -1313,7 +1314,7 @@ void reinitialize(unsigned int G[], unsigned int new_source) {
 
   //Serial.println("finding new shortest path with source");
   //Serial.println(new_source);
-  //printGraphArray(G);
+  //debug_printGraphArray(G);
   shortestPath(path, G, new_source);
   //Serial.println("found new shortest path");
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
@@ -1338,56 +1339,62 @@ void reinitialize(unsigned int G[], unsigned int new_source) {
 
 void setup() {
   // put your setup code here, to run once:
+  
   Serial.begin(500000);  
 
-  AFMS.begin(1600);    //default frequency 1.6KHz
-  Wire.setClock(400000);      //I2C freq to 400KHz
+  AFMS.begin(1600);                       //default frequency 1.6KHz
+  Wire.setClock(400000);                  //I2C freq to 400KHz
 
+  //releases left and right wheel motors
   leftMotor->release();
   rightMotor->release();
   
-  //ultrasonic pins
+  //sets pins for ultrasonic censor on front servomotor
   pinMode(trig, OUTPUT);
   pinMode(echo, INPUT);
 
-  //BUTTON START CODE
-  pinMode(2, OUTPUT); //left led
-  pinMode(3, OUTPUT); //right led
-  pinMode(8, INPUT); //button
+  //set pins for left and right front red LEDs and button on bread board
+  pinMode(2, OUTPUT);                     //left led
+  pinMode(3, OUTPUT);                     //right led
+  pinMode(8, INPUT);                      //button
+  
+  //waits for button press to begin, changes LEDs when starting
   Serial.println("Press button when ready...");
-  while(1) {
+  while(1) {                              
     if (digitalRead(8) == HIGH) {
       digitalWrite(2, HIGH);
       digitalWrite(3, HIGH);  
       break;
     }  
   }
-  
-  //initialize
-  unsigned int G[GRAPH_HEIGHT * GRAPH_WIDTH] = {0};
-  unsigned int source;
 
-  //set start direction, in queue, in path, and initial G value for initial source
+  //initialize all graph indices bits to 0
+  unsigned int G[GRAPH_HEIGHT * GRAPH_WIDTH] = {0};
+  //set source index
+  unsigned int source = getIndex(srcXandY[0], srcXandY[1]);
+  unsigned int path[GRAPH_HEIGHT * GRAPH_WIDTH];
+
+  //set start direction, in queue, in path, and initial G value for initial source (same for each course with exception of start direction)
   for(int i = 0; i < 2; i++) {
-    bitWrite(G[getIndex(srcXandY[0], srcXandY[1])], i, bitRead(START_DIRECTION, i)); 
-    bitWrite(G[getIndex(srcXandY[0], srcXandY[1])], 3, 1);
-    bitWrite(G[getIndex(srcXandY[0], srcXandY[1])], 2, 1);
-    setG(G, getIndex(srcXandY[0], srcXandY[1]), 0); 
-    source = getIndex(srcXandY[0], srcXandY[1]);
+    //bits 0 and 1: start direction (0 is least-significant (rightmost) bit)
+    bitWrite(G[source], i, bitRead(START_DIRECTION, i)); 
+    //bit 3: if graph index is in path (0 is least-significant (rightmost) bit)
+    bitWrite(G[source], 3, 1);
+    //bit 2: if graph index is in queue (0 is least-significant (rightmost) bit)
+    bitWrite(G[source], 2, 1);
+    setG(G, source, 0); 
+    
   }
   //sets initial g values for all nodes except source 
-  //sets source in queue, in path, and g = 0
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     //if not source, set g to max value
     if (!isSource(i)) setG(G, i, -1);
   }
-  
-  unsigned int path[GRAPH_HEIGHT * GRAPH_WIDTH];
 
-  //printGraphArray(G);
-  
+  //find shortest path
   shortestPath(path, G, source);
-  
+
+  //set path counter to path index that source index is at to start traversing path
   unsigned int path_count = 0;
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     if (path[i] == source) {
@@ -1395,23 +1402,23 @@ void setup() {
     }
   }
 
-  
-  //gives path index in order
+/*
+  //prints path index in order
   for (int i = path_count; i >= 0; i--) {
     Serial.print(path[i]);
     Serial.print(" -->");
   }
-  
+*/
+
+  //traverses found path
   traversePath(G, path, path_count);
+  
   /*
   Serial.println(path_count);
   for (int i = path_count; i > 0; i--) {
     Serial.println(path[i]);
   }
   */
-
-
-
 /*
   bool obstacles;
   while (!obstacles) {
@@ -1420,8 +1427,6 @@ void setup() {
   Serial.println("Obstacle detected");
 */
 
-
-
   leftMotor->release();
   rightMotor->release();
 
@@ -1431,7 +1436,7 @@ void setup() {
     Serial.print(path[i]);
     Serial.print(" -->");
   }
-  printGraphArray(G);
+  debug_printGraphArray(G);
 */
 /*
   for (int i = 0; i <= path_count + 1; i++) {
@@ -1439,7 +1444,7 @@ void setup() {
   }
 
   Serial.println("\n");
-  printGraphArray(G);
+  debug_printGraphArray(G);
 */  
   /* printing out obstacles
   unsigned int displayint;
@@ -1459,4 +1464,5 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly
+  // setup contains all function - run once to traverse one path
 }
