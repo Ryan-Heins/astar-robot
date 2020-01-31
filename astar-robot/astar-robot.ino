@@ -28,7 +28,7 @@ Adafruit_StepperMotor *leftMotor = AFMS.getStepper(513, 1);
 Adafruit_StepperMotor *rightMotor = AFMS.getStepper(513, 2);
 
 //debug function
-void debug_printCoor(unsigned int G[]) {
+void debug_printCoor() {
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     Serial.print("Graph Index: ");
     Serial.print(i);
@@ -43,7 +43,6 @@ void debug_printCoor(unsigned int G[]) {
 
 //debug function
 void debug_printGraphArray(unsigned int G[]) {
-  //debug_printCoor(G);
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     Serial.print("X: ");
     Serial.print(getXCoor(i));
@@ -68,7 +67,7 @@ void debug_printGraphArray(unsigned int G[]) {
   }
 }
 
-//given graph index, sets G value
+//given graph index, sets G value provided
 void setG(unsigned int G[], int graph_index, unsigned int g) {
   for(int i = 5; i < 14; i++) {
     bitWrite(G[graph_index], i, bitRead(g, i - 5)); 
@@ -107,7 +106,7 @@ unsigned int cost(unsigned int G[], int graph_index) {
   return (getH(graph_index) + getG(G, graph_index));
 }
 
-//gets graph_index given x and y coordinate
+//returns the index of the graph x and y coordinates
 unsigned int getIndex(unsigned int x, unsigned int y) {
   return (y * GRAPH_WIDTH + x);
 }
@@ -121,7 +120,7 @@ unsigned char getYCoor(int graph_index) {
 }
 
 //returns true if node is dest node
-bool isDest(int graph_index) {
+bool isDest(unsigned int graph_index) {
   if (getIndex(destXandY[0], destXandY[1]) == graph_index) {
     return true;
   } else {
@@ -129,7 +128,7 @@ bool isDest(int graph_index) {
   }
 }
 //returns true if node is source node
-bool isSource(int graph_index) {
+bool isSource(unsigned int graph_index) {
   if (getIndex(srcXandY[0], srcXandY[1]) == graph_index) {
     return true;
   } else {
@@ -251,11 +250,10 @@ unsigned int adjacentCost(unsigned int G[], unsigned int node, unsigned int adj_
 
  //**********A star************//
 void shortestPath(unsigned int path[], unsigned int G[], unsigned int source) {
-  unsigned int retval;
   unsigned int minPriorityIndex = 0;
   bool done = false;
 
-  unsigned int minCost, minG, minH, adjcost, adjG, adjH, currG, currH, currCost;
+  unsigned int minCost, minG, minH, currG, currH, currCost;
  
   while (!done) {
     if (source == 0) { 
@@ -458,7 +456,6 @@ void shortestPath(unsigned int path[], unsigned int G[], unsigned int source) {
         }
       }
     }
-    //debug_printGraphArray(G);
   }
 
   //build path
@@ -478,10 +475,12 @@ void shortestPath(unsigned int path[], unsigned int G[], unsigned int source) {
   Serial.print("'s optimal previous: ");
   Serial.println(prev_optimal_dir);
   */
-  //debug_printGraphArray(G);
+
+  //sets previous optimal at destination
   unsigned int prev_optimal = getIndex(destXandY[0], destXandY[1]), path_count = 0;
-  
-  while (prev_optimal >= 0) {
+
+  //until previous optimal is the source
+  while (prev_optimal != 0) {
     /*
     Serial.print("prev_optimal: ");
     Serial.print(prev_optimal);
@@ -523,14 +522,10 @@ void shortestPath(unsigned int path[], unsigned int G[], unsigned int source) {
 }
 
 bool step12() {
-  long duration = 0;
   int steps = 1438;
   bool obstacle = false;
-  
-  int light_count = 0;
 
   for (; steps >= 0; steps--) {
-    duration = 0;
     leftMotor->onestep(FORWARD, DOUBLE);
     rightMotor->onestep(FORWARD, DOUBLE);
     //delayMicroseconds(90);
@@ -561,23 +556,28 @@ bool step12() {
   }
   return obstacle;
 }
-/*
-bool step12(unsigned int G[], int graph_index, int ahead) {
+
+//step 1 foot while detecting for unknown obstacles (looking before stepping)
+//param: ahead - direction of next step
+//param: graph_index - current location
+//param: G - all graph index bit values
+bool step12_obstacle_detect(unsigned int G[], int graph_index, int ahead) {
   Servo servo;
   servo.attach(controlPin);
   
   long duration = 0;
   int steps = 1438;
   bool obstacle = false;
+  bool obstacleinFront = false;
   int angle = 0;
   
   int light_count = 0;
   int ultra_count = 0;
 
-  if (look(graph_index, ahead) == 1) {
+  if (look(G, graph_index, ahead)) {
     servo.write(180);
     delay(200);
-  } else if (look(graph_index, ahead) == 3) {
+  } else if (look(G, graph_index, ahead)) {
     servo.write(0);
     delay(200);
   }
@@ -895,7 +895,6 @@ bool step12(unsigned int G[], int graph_index, int ahead) {
 
     servo.write(90);
 
-/*
   while (angle <= 180) {
     servo.write(angle);
     delay(300);
@@ -1029,7 +1028,6 @@ bool step12(unsigned int G[], int graph_index, int ahead) {
 
   return obstacleinFront;
 }
-*/
 
 //looks in direction needed to go, checks for obstacle
 bool look(unsigned int G[], unsigned int graph_index, unsigned int dir) {
@@ -1140,7 +1138,6 @@ bool lookStraight(unsigned int G[], unsigned int graph_index) {
   Servo servo;
   servo.attach(controlPin);
   long duration = 0;
-  int steps = 1438;
   bool obstacle = false; 
   int ultra_count = 0;
 
@@ -1300,7 +1297,7 @@ void reinitialize(unsigned int G[], unsigned int new_source) {
   bitWrite(G[new_source], 3, 1);  //puts new source in queue
   bitWrite(G[new_source], 2, 0);
   setG(G, new_source, 0); 
-  for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
+  for (unsigned int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
     //if not source, set g to max value
     setDirection(G, i, 0);
     setParentDirection(G, i, 0);
@@ -1314,7 +1311,6 @@ void reinitialize(unsigned int G[], unsigned int new_source) {
 
   //Serial.println("finding new shortest path with source");
   //Serial.println(new_source);
-  //debug_printGraphArray(G);
   shortestPath(path, G, new_source);
   //Serial.println("found new shortest path");
   for (int i = 0; i < GRAPH_HEIGHT * GRAPH_WIDTH; i++) {
@@ -1436,7 +1432,6 @@ void setup() {
     Serial.print(path[i]);
     Serial.print(" -->");
   }
-  debug_printGraphArray(G);
 */
 /*
   for (int i = 0; i <= path_count + 1; i++) {
@@ -1444,7 +1439,6 @@ void setup() {
   }
 
   Serial.println("\n");
-  debug_printGraphArray(G);
 */  
   /* printing out obstacles
   unsigned int displayint;
